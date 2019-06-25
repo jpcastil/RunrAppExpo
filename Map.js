@@ -1,6 +1,6 @@
 import React, {Component} from 'react';
 import {AppRegistry,StyleSheet,Text,View} from 'react-native';
-import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
+import MapView, {Marker} from 'react-native-maps';
 
 
 const styles = StyleSheet.create({
@@ -17,7 +17,10 @@ const styles = StyleSheet.create({
 });
 
 
+
+
 export default class Map extends Component {
+
 
 
     constructor(){
@@ -31,6 +34,7 @@ export default class Map extends Component {
             },
             location: {latitude:null, longitude:null},
             error: null
+
         }
     }
 
@@ -63,18 +67,19 @@ export default class Map extends Component {
         this.setState({error: err.message});
     }
 
-
-
     render() {
-      return (
-
-          <MapView
-            style={styles.map}
-            region={this.state.region}
-            >
+        return (
+            <MapView
+                style={styles.map}
+                region={this.state.region}
+                >
+            <MapView.Marker
+                coordinate={{latitude: this.state.region.latitude,
+                longitude: this.state.region.longitude}}
+                /*title={"Home"}
+                description={"This is a test"}*/
+                />
             </MapView>
-
-
       );
     }
 
