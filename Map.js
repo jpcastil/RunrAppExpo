@@ -51,7 +51,7 @@ export default class Map extends Component {
             distanceFilter: 0
         };
         this.setState({ready:false, error: null });
-        navigator.geolocation.watchPosition(this.geoSuccess, this.geoFailure, options);
+        navigator.geolocation.getCurrentPosition(this.geoSuccess, this.geoFailure, options);
 
         }
 
