@@ -1,34 +1,41 @@
-componentDidMount(){
-    let geoOptions = {
-        enableHighAccuracy: true,
-        timeOut: 20000,
-        maximumAge: 60 * 60 * 24
-    };
-    this.setState({ready:false, error: null });
-    navigator.geolocation.getCurrentPosition( this.geoSuccess,
-                                            this.geoFailure,
-                                            geoOptions);
-}
-geoSuccess = (position) => {
-    console.log("Position has been retrieved");
+import React, {Component} from 'react';
+import {AppRegistry,StyleSheet,Text,View,AsyncStorage, Button} from 'react-native';
+import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
+import Map from './Map';
+import RunButton from './RunButton';
 
-    this.setState({
-        ready:true,
-        location: {latitude: position.coords.latitude,longitude:position.coords.longitude }
-    })
+const styles = StyleSheet.create({
+    overallContainer: {
+        height: '100%'
+    },
+    container: {
+        height: '50%',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+    },
+    button : {
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+    }
+
+});
+
+export default class Runr extends Component {
+
+    render() {
+        return (
+            <View syyle={styles.overallContainer}>
+                <View style={styles.container}>
+                    <Map />
+                </View>
+                <View style={styles.button}>
+
+                </View>
+
+            </View>
+        );
+    }
+
 }
 
-
-constructor(){
-super();
-this.state = {
-    region: {
-        latitude: 37.78825,
-        longitude: -122.4324,
-        latitudeDelta: 0.015,
-        longitudeDelta: 0.0121,
-        },
-    ready: false,
-    location: {latitude:null, longitude:null},
-    error: null
-}
+AppRegistry.registerComponent('Runr', () => Runr);

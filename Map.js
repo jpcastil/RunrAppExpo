@@ -39,15 +39,20 @@ export default class Map extends Component {
     }
 
     componentDidMount(){
-        let geoOptions = {
+        /*let geoOptions = {
             enableHighAccuracy: true,
             timeOut: 20000,
             maximumAge: 60 * 60 * 24
+        };*/
+        let options = {
+            enableHighAccuracy: false,
+            timeOut: 100,
+            maximumAge: 60 * 60 * 24,
+            distanceFilter: 0
         };
         this.setState({ready:false, error: null });
-        navigator.geolocation.getCurrentPosition( this.geoSuccess,
-                                                this.geoFailure,
-                                                geoOptions);
+        navigator.geolocation.watchPosition(this.geoSuccess, this.geoFailure, options);
+
         }
 
     geoSuccess = (position) => {
@@ -61,11 +66,16 @@ export default class Map extends Component {
                 longitudeDelta: 0.0121
             }
         })
+        console.log("Latitude" + " " +position.coords.latitude + "  " + "longitude" + " " + position.coords.longitude);
+
+
     }
 
     geoFailure = (err) => {
         this.setState({error: err.message});
     }
+
+
 
     render() {
         return (
@@ -76,8 +86,8 @@ export default class Map extends Component {
             <MapView.Marker
                 coordinate={{latitude: this.state.region.latitude,
                 longitude: this.state.region.longitude}}
-                /*title={"Home"}
-                description={"This is a test"}*/
+                title={"Home"}
+                description={"This is a test"}
                 />
             </MapView>
       );
