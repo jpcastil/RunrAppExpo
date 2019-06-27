@@ -28,6 +28,7 @@ export default class Runr extends Component {
     constructor(){
         super();
         this.state = {
+            watchId: null,
             onRunBool: true,
             title: "Start Run",
             region: {
@@ -81,19 +82,28 @@ export default class Runr extends Component {
 
     onRun = () => {
         if (this.state.onRunBool){
+            let options = {
+                enableHighAccuracy: true,
+                timeOut: 100,
+                maximumAge: 60 * 60 * 24,
+                distanceFilter: 5
+            };
+            watchIdd = navigator.geolocation.watchPosition(this.geoSuccess, this.geoFailure, options);
             this.setState({
-               onRunBool: false,
-               title: "Stop Run",
-               color: 'red'
+                watchId : watchIdd,
+                onRunBool: false,
+                title: "Stop Run",
+                color: 'red'
            });
        }
-       else{
+       else if (! this.state.onRunBool){
+           navigator.geolocation.clearWatch(this.state.watchId);
+           navigator.geolocation.stopObserving();
            this.setState({
                onRunBool: true,
                title: "Start Run",
                color: 'blue'
           });
-
        }
 
 
