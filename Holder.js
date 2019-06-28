@@ -1,41 +1,30 @@
-import React, {Component} from 'react';
-import {AppRegistry,StyleSheet,Text,View,AsyncStorage, Button} from 'react-native';
-import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
-import Map from './Map';
-import RunButton from './RunButton';
 
-const styles = StyleSheet.create({
-    overallContainer: {
-        height: '100%'
-    },
-    container: {
-        height: '50%',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-    },
-    button : {
-        alignItems: 'center',
-        justifyContent: 'flex-end',
+<View>
+    <Text>{this.format(this.state.time)}</Text>
+</View>
+
+format = (time) => {
+    let minutes = Math.floor(time / 60) % 60
+    let seconds = time % 60
+    let hours = Math.floor( Math.floor(time / 60) / 60)
+    if (seconds < 10){
+        seconds = "0"+seconds
     }
 
-});
-
-export default class Runr extends Component {
-
-    render() {
-        return (
-            <View syyle={styles.overallContainer}>
-                <View style={styles.container}>
-                    <Map />
-                </View>
-                <View style={styles.button}>
-
-                </View>
-
-            </View>
-        );
+    if (minutes < 10){
+        minutes = "0"+minutes
     }
+    if (hours < 10){
+        hours = "0"+hours
+    }
+    return hours +":"+minutes+":"+seconds
+ }
 
-}
+ worked = () => {
+     setInterval(() => (
 
-AppRegistry.registerComponent('Runr', () => Runr);
+      this.setState(previousState => (
+        { time: this.state.time + 1}
+            ))
+    ), 1000);
+  }
