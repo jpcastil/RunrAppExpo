@@ -1,192 +1,319 @@
 import React, {Component} from 'react';
-import {AppRegistry,StyleSheet,Text,View,AsyncStorage, Button, TouchableHighlight} from 'react-native';
+import {AppRegistry,StyleSheet,Text,View,AsyncStorage, Button, Alert, SafeAreaView, TouchableOpacity} from 'react-native';
 import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
 import Map from './Map';
 import { Stopwatch, Timer } from 'react-native-stopwatch-timer'
 
 
 const styles = StyleSheet.create({
-    overallContainer: {
-        height: '100%'
+    fill: {
+        ...StyleSheet.absoluteFillObject,
     },
     container: {
-        height: '75%',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
+        height: '60%',
     },
-    button : {
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-    },
-    map: {
-      ...StyleSheet.absoluteFillObject,
-    },
+    centerItem: {
+        alignItems: 'center'
+    }
 
 });
 
+function distance(lat1, lon1, lat2, lon2, unit) {
+    if ((lat1 == lat2) && (lon1 == lon2)) {
+        return 0;
+    } else {
+        var radlat1 = Math.PI * lat1 / 180;
+        var radlat2 = Math.PI * lat2 / 180;
+        var theta = lon1 - lon2;
+        var radtheta = Math.PI * theta / 180;
+        var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+        if (dist > 1) {
+            dist = 1;
+        }
+        dist = Math.acos(dist);
+        dist = dist * 180 / Math.PI;
+        dist = dist * 60 * 1.1515;
+        if (unit == "K") {
+            dist = dist * 1.609344
+        }
+        if (unit == "N") {
+            dist = dist * 0.8684
+        }
+        return dist;
+    }
+}
+
+const options = {
+    enableHighAccuracy: true,
+    timeOut: 20000,
+    maximumAge: 60 * 60 * 24,
+    distanceFilter: 10
+};
+
+let latitudes = []
+let longitudes = []
+let times = []
 
 export default class Runr extends Component {
-    constructor(){
+    constructor() {
         super();
         this.state = {
+            activeListening: false,
             watchId: null,
+            disabled: true,
             onRunBool: true,
-            title: "Start Run",
+            paused: false,
+            stopwatchStart: false,
+            stopwatchReset: false,
+            starttime: null,
+            currentTime: null,
             region: {
                 latitude: 37.78825,
                 longitude: -122.4324,
-                latitudeDelta: 0.015,
-                longitudeDelta: 0.0121
+                latitudeDelta: 0.04,
+                longitudeDelta: 0.03
             },
-            error: null,
-            color: 'blue',
-            stopwatchStart: false,
-            totalDuration: 90000,
-            stopwatchReset: false,
-            starttime: 0,
-            currentTime:0
+            startLocation: {
+                latitude: null,
+                longitude: null,
+            },
+            distance: 0,
+            pace: '0:00',
+
         }
     }
+    geoFailure = (err) => {
+        console.log(err.message);
+    }
 
+    componentDidMount() {
+        this.geoPassiveListen()
 
-
-    componentDidMount(){
-        /*let geoOptions = {
-            enableHighAccuracy: true,
-            timeOut: 20000,
-            maximumAge: 60 * 60 * 24
-        };*/
-        let options = {
-            enableHighAccuracy: false,
-            timeOut: 100,
-            maximumAge: 60 * 60 * 24,
-            distanceFilter: 0
-        };
-        this.setState({ready:false, error: null });
-        navigator.geolocation.getCurrentPosition(this.geoSuccess, this.geoFailure, options);
-        }
-
-
-
-
-    geoSuccess = (position) => {
-        
+    }
+    geoPassiveListen(){
         this.setState({
-            ready:true,
-            location: {lattitude: position.coords.latitude,longitude:position.coords.longitude },
+            watchId: navigator.geolocation.watchPosition(this.geoUpdateMap, this.geoFailure, options),
+        });
+    }
+    geoPassiveMute(){
+        navigator.geolocation.clearWatch(this.state.watchId);
+        navigator.geolocation.stopObserving();
+    }
+    geoUpdateMap = (position) => {
+        this.setState({
             region: {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude,
-                latitudeDelta: 0.015,
-                longitudeDelta: 0.0121
+                latitudeDelta: 0.004,
+                longitudeDelta: 0.004
             }
         })
-        if (this.state.stopwatchStart) {
-            let x = new Date();
-            this.setState({
-                currentTime: x - this.state.starttime
-            })
+
+    }
+
+
+    geoActiveListen(){
+        this.setState({
+            watchId: navigator.geolocation.watchPosition(this.geoAppendPositionTime, this.geoFailure, options),
+            activeListening: ! this.state.activeListening
+        });
+    }
+    geoAppendPositionTime = (position) =>{
+        this.updateDistance(position)
+
+
+
+        let newDate = new Date()
+        this.updateAveragePace(this.convertMillis((newDate - this.state.starttime) / this.state.distance  ))
+        latitudes.push(position.coords.latitude)
+        longitudes.push(position.coords.longitude)
+        times.push(newDate)
+        /*console.log(latitudes)
+        console.log(longitudes)*/
+
+        this.geoUpdateMap(position)
+
+    }
+    updateDistance = (position) =>{
+        this.setState({
+            distance: this.state.distance + distance(position.coords.latitude, position.coords.longitude, latitudes[latitudes.length - 1], longitudes[ longitudes.length - 1])
+        });
+    }
+
+    geoAppendPausedNull = (position) =>{
+        this.geoAppendPositionTime(position)
+        latitudes.push(null)
+        times.push(null)
+        longitudes.push(null)
+        /*console.log(latitudes)
+        console.log(longitudes)
+        console.log(times)*/
+    }
+    geoActiveMute(){
+        this.setState({
+            activeListening: ! this.state.activeListening
+        });
+        navigator.geolocation.clearWatch(this.state.watchId);
+        navigator.geolocation.stopObserving();
+    }
+    updatePause(){
+        this.setState({
+            paused: ! this.state.paused
+        });
+    }
+
+
+    updateOnRunBool (){
+        this.setState({
+            onRunBool: ! this.state.onRunBool,
+        });
+    }
+    toggleStopwatch() {
+        this.setState({
+            stopwatchStart: !this.state.stopwatchStart,
+            stopwatchReset: false
+        });
+    }
+    reset = () => {
+        latitudes = []
+        longitudes = []
+        times = []
+        if (this.state.activeListening){
+            this.geoActiveMute()
+            this.geoPassiveListen()
         }
+        this.setState({
+            distance: 0,
+            watchId: null,
+            disabled: true,
+            onRunBool: true,
+            paused: false,
+            stopwatchStart: false,
+            stopwatchReset: true,
+            starttime: null,
+            currentTime: null,
+            startLocation: {
+                latitude: null,
+                longitude: null,
+            },
+            pace: "0:00"
+        });
+    }
+    getFormattedTime(time) {
+        this.currentTime = time;
+    };
 
 
-        console.log("Latitude" + " " +position.coords.latitude + "  " + "longitude" + " " + position.coords.longitude);
-        let y = Date();
-        console.log(Math.floor(this.state.currentTime/ 1000));
+    initPosition = (position) =>{
+        let newDate = new Date()
+        if (this.state.startLocation.latitude === null){
+            this.setState({
+                startLocation: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                },
+                starttime: newDate
+            });
+        }
+        latitudes.push(position.coords.latitude)
+        longitudes.push(position.coords.longitude)
+        times.push(newDate)
+        /*console.log(latitudes)
+        console.log(longitudes)
+        console.log(times)*/
+        this.geoActiveListen()
 
     }
-
-    geoFailure = (err) => {
-        this.setState({error: err.message});
+    onRunUpdatePause(){
+        if (! this.state.paused){
+            this.updateOnRunBool()
+        } else {
+            this.setState({
+                paused: ! this.state.paused
+            });
+        }
     }
+
 
     onRun = () => {
+        this.geoPassiveMute()
+        navigator.geolocation.getCurrentPosition(this.initPosition, this.geoFailure, options);
+        this.toggleStopwatch()
+        this.onRunUpdatePause()
 
-        if (this.state.onRunBool){
-            this.toggleStopwatch()
-            let tiempo = new Date();
-            let options = {
-                enableHighAccuracy: true,
-                timeOut: 100,
-                maximumAge: 60 * 60 * 24,
-                distanceFilter: 5
-            };
-            watchIdd = navigator.geolocation.watchPosition(this.geoSuccess, this.geoFailure, options);
+    }
+    onNotRun = () => {
+        this.geoActiveMute()
+        navigator.geolocation.getCurrentPosition(this.geoAppendPausedNull, this.geoFailure, options);
+        this.toggleStopwatch()
+        this.updatePause()
+        this.geoPassiveListen()
+    }
+
+    convertMillis(millis){
+        let minutes = Math.floor(millis / 60000);
+        let seconds = ((millis % 60000) / 1000).toFixed(0);
+        return minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+    }
+    updateAveragePace(inputPace){
+        if (inputPace != 'Infinity:NaN'){
             this.setState({
-                watchId : watchIdd,
-                onRunBool: false,
-                title: "Stop Run",
-                color: 'red',
-                starttime: tiempo
-           });
-       }
+                pace: inputPace
+            });
+        }
+    }
 
-       else if (! this.state.onRunBool){
-           console.log(this.state.starttime);
-           this.toggleStopwatch()
-           navigator.geolocation.clearWatch(this.state.watchId);
-           navigator.geolocation.stopObserving();
-
-           this.setState({
-               onRunBool: true,
-               title: "Start Run",
-               color: 'blue',
-          });
-       }
-     }
-
-     toggleStopwatch() {
-         this.setState({stopwatchStart: !this.state.stopwatchStart, stopwatchReset: false});
-     }
-
-     resetStopwatch = () => {
-         this.setState({stopwatchStart: false, stopwatchReset: true});
-     }
-     getFormattedTime(time) {
-         this.currentTime = time;
-     };
-
-
-    render() {
-        return (
-            <View syyle={styles.overallContainer}>
-                <View style={styles.container}>
-                    <MapView
-                        style={styles.map}
-                        region={this.state.region}
-                        showsUserLocation={true}
-                        >
-                    <MapView.Marker
-                        coordinate={{latitude: this.state.region.latitude,
-                        longitude: this.state.region.longitude}}
-                        title={"Home"}
-                        description={"This is a test"}
-                        />
-                    </MapView>
+     render() {
+         return (
+             <SafeAreaView style={styles.fill}>
+                 <View style={styles.centerItem}>
+                     <Stopwatch laps msecs={false} start={this.state.stopwatchStart}
+                         reset={this.state.stopwatchReset}
+                         getTime={this.getFormattedTime} />
+                     <Text> Time </Text>
+                 </View>
+                 <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
+                     <View>
+                         <Text>{this.state.pace}</Text>
+                         <Text>Average (min/mi)</Text>
+                     </View>
+                    <View>
+                        <Text>{this.state.distance.toFixed(2)}</Text>
+                        <Text>Distance (mi)</Text>
+                    </View>
                 </View>
-                <View style= {styles.button}>
+
+                 <View style={styles.container}>
+                     <MapView
+                         style={styles.fill}
+                         region={this.state.region}
+                         showsUserLocation={true}
+                         >
+                     </MapView>
+                 </View>
+
+                 <View style={{flexDirection: 'row', justifyContent: 'center'}}>
                     <Button
-                        title= {this.state.title}
-                        color= {this.state.color}
-                        onPress= {this.onRun}
-                    ></Button>
-                </View>
-                <View style= {styles.button}>
-                    <Stopwatch laps msecs start={this.state.stopwatchStart}
-                        reset= {this.state.stopwatchReset}
-                        getTime= {this.getFormattedTime} />
+                        title= {this.state.paused ? "Continue" : "Pause"}
+                        color= "#bfff80"
+                        onPress={this.state.paused ? this.onRun : this.onNotRun}
+                        disabled={this.state.onRunBool}
+                        />
+
+                    <Button
+                        title={this.state.onRunBool ? "Start" : "Finish"}
+                        color={"blue"}
+                        onPress={this.state.onRunBool ? this.onRun: this.onNotRun}
+                        />
                     <Button
                         title= "Reset"
                         color= "red"
-                        onPress= {this.resetStopwatch}
-                     ></Button>
-                  </View>
+                        onPress={this.reset}
+                        disabled={ this.state.onRunBool }
+                        />
+                 </View>
 
-
-
-
-
-
-            </View>
+             </SafeAreaView>
         );
     }
 
