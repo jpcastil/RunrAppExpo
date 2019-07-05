@@ -14,6 +14,13 @@ const styles = StyleSheet.create({
     },
     centerItem: {
         alignItems: 'center'
+    },
+    centerItemTop: {
+        alignItems: 'center',
+    },
+    ValueTop: {
+        backgroundColor: 'black',
+        color:'white'
     }
 
 });
@@ -273,12 +280,12 @@ export default class Runr extends Component {
                      <Text> Time </Text>
                  </View>
                  <View style={{flexDirection: 'row', justifyContent: 'space-around'}}>
-                     <View>
-                         <Text>{this.state.pace}</Text>
+                     <View style={styles.centerItemTop}>
+                         <Text style={styles.ValueTop}>{this.state.pace}</Text>
                          <Text>Average (min/mi)</Text>
                      </View>
-                    <View>
-                        <Text>{this.state.distance.toFixed(2)}</Text>
+                    <View style={styles.centerItemTop}>
+                        <Text style={styles.ValueTop}>{this.state.distance.toFixed(2)}</Text>
                         <Text>Distance (mi)</Text>
                     </View>
                 </View>
